@@ -5,24 +5,18 @@
 // 实现与MySQL交互
 var mysql = require('mysql');
 var $conf = require('../conf/db');
-//var $util = require('../util/util');
-var $sql = require('./userSqlMapping');
-//var SSHDBConnection = require('../conf/sshDbConnection');
-// 使用连接池，提升性能
-//var pool  = mysql.createPool($util.extend({}, $conf.mysql));
-var pool = mysql.createPool( $conf.mysql );
-//var sshDbConnection = new SSHDBConnection();
-// 向前台返回JSON方法的简单封装
-var jsonWrite = function (res, ret) {
-    if(typeof ret === 'undefined') {
-        res.json({
-            code:'1',
-            msg: '操作失败'
-        });
-    } else {
-        res.json(ret);
-    }
+var $utils = require('../util/utils');
+var sql = {
+    insert:'INSERT INTO USER(name, user_group_id, password, nickname, age, sex, phone, email, idCardNo, state) VALUES(?,?,?,?,?,?,?,?,?,?)',
+    update:'UPDATE USER SET name=?, age=?, nickName=?, sex=?, phone=?, email=?, idCardNo=? WHERE id=?',
+    delete: 'DELETE FROM USER where id=?',
+    queryById: 'SELECT * FROM USER WHERE id=?',
+    queryByName: 'SELECT * FROM USER WHERE name=?',
+    queryAll: 'SELECT * FROM USER'
 };
+// 使用连接池，提升性能
+var pool = mysql.createPool( $conf.mysql );
+
 module.exports = {
     add: function (req, res, next) {
         pool.getConnection(function(err, connection) {
@@ -31,7 +25,7 @@ module.exports = {
 
             // 建立连接，向表中插入值
             // 'INSERT INTO user(id, name, age) VALUES(0,?,?)',
-            connection.query($sql.insert, [param.name, param.userGroupId, param.password, param.nickname, param.age, param.sex, param.phone, param.email, param.idCardNo, param.state],
+            connection.query(sql.insert, [param.name, param.userGroupId, param.password, param.nickname, param.age, param.sex, param.phone, param.email, param.idCardNo, param.state],
                 function(err, result) {
                 if(result) {
                     result = {
@@ -41,7 +35,7 @@ module.exports = {
                 }
 
                 // 以json形式，把操作结果返回给前台页面
-                jsonWrite(res, result);
+                $utils.jsonWrite(res, result);
 
                 // 释放连接
                 connection.release();
@@ -52,7 +46,7 @@ module.exports = {
         // delete by Id
         pool.getConnection(function(err, connection) {
             var id = +req.query.id;
-            connection.query($sql.delete, id, function(err, result) {
+            connection.query(sql.delete, id, function(err, result) {
                 if(result.affectedRows > 0) {
                     result = {
                         code: 200,
@@ -61,7 +55,7 @@ module.exports = {
                 } else {
                     result = void 0;
                 }
-                jsonWrite(res, result);
+                $utils.jsonWrite(res, result);
                 connection.release();
             });
         });
@@ -71,12 +65,12 @@ module.exports = {
         // 为了简单，要求同时传name和age两个参数
         var param = req.body;
         if(param.name == null || param.age == null || param.id == null) {
-            jsonWrite(res, undefined);
+            $utils.jsonWrite(res, undefined);
             return;
         }
 
         pool.getConnection(function(err, connection) {
-            connection.query($sql.update, [param.name, param.age, param.nickName, param.sex, param.phone, param.email, param.idCardNo, +param.id], function(err, result) {
+            connection.query(sql.update, [param.name, param.age, param.nickName, param.sex, param.phone, param.email, param.idCardNo, +param.id], function(err, result) {
                 // 使用页面进行跳转提示
                 if(result.affectedRows > 0) {
                     res.render('suc', {
@@ -87,7 +81,7 @@ module.exports = {
                         result: result
                     });
                 }
-                jsonWrite(res, result);
+                $utils.jsonWrite(res, result);
                 connection.release();
             });
         });
@@ -96,8 +90,18 @@ module.exports = {
     queryById: function (req, res, next) {
         var id = +req.query.id; // 为了拼凑正确的sql语句，这里要转下整数
         pool.getConnection(function(err, connection) {
-            connection.query($sql.queryById, id, function(err, result) {
-                jsonWrite(res, result);
+            connection.query(sql.queryById, id, function(err, result) {
+                $utils.jsonWrite(res, result);
+                connection.release();
+
+            });
+        });
+    },
+    queryByName: function (req, res, next) {
+        var name = req.query.name; // 为了拼凑正确的sql语句，这里要转下整数
+        pool.getConnection(function(err, connection) {
+            connection.query(sql.queryByName, name, function(err, result) {
+                $utils.jsonWrite(res, result);
                 connection.release();
 
             });
@@ -105,8 +109,8 @@ module.exports = {
     },
     queryAll: function (req, res, next) {
         pool.getConnection(function(err, connection) {
-            connection.query($sql.queryAll, function(err, result) {
-                jsonWrite(res, result);
+            connection.query(sql.queryAll, function(err, result) {
+                $utils.jsonWrite(res, result);
                 connection.release();
             });
         });
