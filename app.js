@@ -9,6 +9,9 @@ var index = require('./routes/index');
 var users = require('./routes/users');
 var userGroup = require('./routes/userGroup');
 var trade = require('./routes/trade');
+var tradeCycle = require('./routes/tradeCycle');
+var settlement = require('./routes/settlement');
+var budgetBalance = require('./routes/budgetBalance');
 
 var app = express();
 
@@ -28,6 +31,9 @@ app.use('/', index);
 app.use('/users', users);
 app.use('/userGroup', userGroup);
 app.use('/trade', trade);
+app.use('/tradeCycle', tradeCycle);
+app.use('/settlement', settlement);
+app.use('/budgetBalance', budgetBalance);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
